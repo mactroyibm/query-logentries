@@ -1,21 +1,21 @@
-var rrs = require("request-retry-stream");
-var from2 = require("from2");
-var pump = require("pump");
-var through2 = require("through2");
+var rrs = require('request-retry-stream');
+var from2 = require('from2');
+var pump = require('pump');
+var through2 = require('through2');
 
 var verbose = false;
 
-module.exports = function(apiKey, queryUrl) {
+module.exports = function (apiKey, queryUrl) {
   if (!apiKey) {
     throw new Error('"apiKey" must be defined');
   }
 
   var defaultRequestOpts = {
-    headers: { "x-api-key": apiKey },
+    headers: { 'x-api-key': apiKey },
     json: true
   };
-  queryUrl = queryUrl || "https://rest.logentries.com/query/logs";
-  return function(opts, callback) {
+  queryUrl = queryUrl || 'https://rest.logentries.com/query/logs';
+  return function (opts, callback) {
     if (!opts.logId) {
       throw new Error('"logId" must be defined');
     }
@@ -24,7 +24,7 @@ module.exports = function(apiKey, queryUrl) {
     }
 
     var to = opts.to || Date.now();
-    var query = opts.query || "where()";
+    var query = opts.query || 'where()';
     var perPage = opts.perPage || undefined;
     defaultRequestOpts.timeout = opts.timeout || 30000;
     var pollInterval = opts.pollInterval || 3000;
@@ -39,13 +39,13 @@ module.exports = function(apiKey, queryUrl) {
         per_page: perPage
       }
     });
-    var stream = from2.obj(function(size, next) {
+    var stream = from2.obj(function (size, next) {
       if (currentBatch.length > 0) {
         return next(null, currentBatch.shift());
       }
       if (nextPageUrl) {
         requestOpts.url = nextPageUrl;
-        return requestQuery(requestOpts, function(err, newBatch, pageUrl) {
+        return requestQuery(requestOpts, function (err, newBatch, pageUrl) {
           if (err) {
             return next(err);
           }
@@ -66,11 +66,11 @@ module.exports = function(apiKey, queryUrl) {
     }
 
     var result = [];
-    var concatStream = through2.obj(function(message, enc, cb) {
+    var concatStream = through2.obj(function (message, enc, cb) {
       result.push(message);
       cb();
     });
-    pump(stream, concatStream, function(err) {
+    pump(stream, concatStream, function (err) {
       if (err) {
         return callback(err);
       }
@@ -78,20 +78,20 @@ module.exports = function(apiKey, queryUrl) {
     });
 
     function requestQuery(reqOpts, cb) {
-      if (verbose) console.log("Making request... ");
+      if (verbose) console.log('Making request... ');
       // console.log(reqOpts);
-      rrs.get(reqOpts, function(err, res, body) {
+      rrs.get(reqOpts, function (err, res, body) {
         if (err) {
-          console.log("Got error: ");
+          console.log('Got error: ');
           console.log(err);
           return cb(err);
         }
         if (res.statusCode === 202 && hasLink(body)) {
-          if (verbose) console.log("Got response...");
+          if (verbose) console.log('Got response...');
           // console.log(body);
           return waitForResult(body.links[0].href);
         }
-        cb(new Error("did not receive poll endpoint from logEntries"));
+        cb(new Error('did not receive poll endpoint from logEntries'));
       });
 
       function waitForResult(pollUrl) {
@@ -101,24 +101,24 @@ module.exports = function(apiKey, queryUrl) {
         poll();
 
         function poll() {
-          if (verbose) console.log("Making poll request... ");
+          if (verbose) console.log('Making poll request... ');
           // console.log(pollOpts);
-          rrs.get(pollOpts, function(err, res, pollBody) {
+          rrs.get(pollOpts, function (err, res, pollBody) {
             if (err) {
               return cb(err);
             }
             if (pollBody.progress !== undefined && pollBody.progress <= 100) {
-              console.log("Request progress: " + pollBody.progress);
+              console.log('Request progress: ' + pollBody.progress);
               return setTimeout(poll, pollInterval);
             }
-            if (verbose) console.log("Got poll response!");
+            if (verbose) console.log('Got poll response!');
             // console.log(pollBody);
             if (
               res.statusCode === 200 &&
               hasLink(pollBody) &&
-              pollBody.links[0].rel === "Next"
+              pollBody.links[0].rel === 'Next'
             ) {
-              return extractMessages(pollBody, opts, function(err, messages) {
+              return extractMessages(pollBody, opts, function (err, messages) {
                 if (err) {
                   return cb(err);
                 }
@@ -144,7 +144,7 @@ function extractMessages(body, opts, cb) {
   if (body.events) {
     try {
       var messages = body.events
-        .map(function(event) {
+        .map(function (event) {
           if (!event.message) {
             return null;
           }
@@ -157,7 +157,7 @@ function extractMessages(body, opts, cb) {
             if (opts.ignoreInvalidJson) {
               return null;
             }
-            if (typeof opts.onInvalidJson === "function") {
+            if (typeof opts.onInvalidJson === 'function') {
               return opts.onInvalidJson(event.message);
             }
             throw e;
