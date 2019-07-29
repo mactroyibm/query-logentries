@@ -34,7 +34,7 @@
   "dependencies": {
     "from2": "2.3.0",
     "pump": "1.0.2",
-    "request-retry-stream": "2.0.0",
+    "request-retry-stream": "2.1.0",
     "through2": "2.0.3"
   }
 }
